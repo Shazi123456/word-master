@@ -358,6 +358,38 @@ body {
   cursor: pointer;
   transition: var(--transition);
   color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quiz-option .option-meaning {
+  font-size: 16px;
+}
+
+.quiz-option .option-detail {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.quiz-option .option-detail .opt-word {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.quiz-option .option-detail .opt-phonetic {
+  font-size: 13px;
+  color: #8e8ea0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.quiz-option .option-detail .opt-phonetic:hover {
+  color: var(--primary);
 }
 
 .quiz-option:hover {
@@ -412,6 +444,18 @@ body {
   line-height: 1.6;
   text-align: center;
   margin: 10px 0;
+}
+
+/* ---------- Quiz Navigation ---------- */
+.quiz-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  gap: 10px;
+}
+
+.quiz-nav .btn {
+  min-width: 100px;
 }
 
 /* ---------- Spelling ---------- */

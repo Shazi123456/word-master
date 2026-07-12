@@ -10,6 +10,7 @@ let queueIndex = 0;
 let currentWord = null;
 let progressCache = {};
 let isTransitioning = false;
+let currentOptionsData = []; // 选择题当前选项数据
 
 // ---------- DOM 引用 ----------
 const $ = (s) => document.querySelector(s);
@@ -356,22 +357,38 @@ fcGood.addEventListener("click", () => fcHandleResult(true));
 fcEasy.addEventListener("click", () => fcHandleResult(true));
 
 // ===================================================================
-//  选择题模式
+//  选择题模式 - 支持上一题/下一题，展示英文+音标+朗读
 // ===================================================================
+let choiceAnswers = {};      // 记录每题的答题结果 { answered, selectedIndex, isCorrect, optionsData }
+let choiceRevealed = false;  // 当前是否已展示答案
+
 function renderChoice() {
   currentWord = queue[queueIndex] || null;
+  choiceRevealed = false;
+
   if (!currentWord) {
     choiceWord.textContent = "🎉 全部完成！";
     choicePos.textContent = ""; choicePhonetic.textContent = "";
     choiceProgress.textContent = ""; choiceSentence.textContent = "";
     choiceResult.textContent = ""; choiceResult.className = "quiz-result";
+    document.getElementById("choicePrev").classList.add("hidden");
     choiceNext.classList.add("hidden");
     choiceOptions.querySelectorAll(".quiz-option").forEach((btn) => {
-      btn.className = "quiz-option"; btn.disabled = true; btn.textContent = "";
+      btn.className = "quiz-option"; btn.disabled = true;
+      btn.querySelector(".option-meaning").textContent = "";
+      btn.querySelector(".option-detail").classList.add("hidden");
     });
     return;
   }
 
+  // 如果已经答过这题，显示保存的结果
+  const saved = choiceAnswers[queueIndex];
+  if (saved) {
+    renderChoiceSaved(saved);
+    return;
+  }
+
+  // 新题目：生成选项
   choiceWord.textContent = currentWord.word;
   choicePos.textContent = currentWord.pos;
   showPhonetic(choicePhonetic, currentWord);
@@ -379,39 +396,145 @@ function renderChoice() {
   choiceResult.textContent = ""; choiceResult.className = "quiz-result";
   choiceSentence.textContent = ""; choiceSentence.className = "quiz-sentence";
   choiceNext.classList.add("hidden");
+  document.getElementById("choicePrev").classList.remove("hidden");
   isTransitioning = false;
 
-  let correctMeaning = currentWord.meaning;
+  // 构造选项数据：每个选项包含英文词、释义、音标
   let distractors = words
-    .filter((w) => w.id !== currentWord.id && w.meaning !== correctMeaning)
-    .map((w) => w.meaning);
-  distractors = [...new Set(distractors)];
+    .filter((w) => w.id !== currentWord.id)
+    .map((w) => ({ word: w.word, meaning: w.meaning, phonetic: w.phonetic }));
+  // 去重（相同释义只留一个）
+  const seenMeanings = new Set();
+  distractors = distractors.filter((d) => {
+    if (seenMeanings.has(d.meaning)) return false;
+    seenMeanings.add(d.meaning);
+    return true;
+  });
   distractors.sort(() => Math.random() - 0.5);
-  let options = [correctMeaning, ...distractors.slice(0, 3)];
-  options.sort(() => Math.random() - 0.5);
+
+  let optionsData = [
+    { word: currentWord.word, meaning: currentWord.meaning, phonetic: currentWord.phonetic, isCorrect: true },
+    ...distractors.slice(0, 3).map((d) => ({ ...d, isCorrect: false })),
+  ];
+  optionsData.sort(() => Math.random() - 0.5);
+
+  // 保存选项数据供 reveal 使用
+  currentOptionsData = optionsData;
 
   const btns = choiceOptions.querySelectorAll(".quiz-option");
   btns.forEach((btn, i) => {
-    btn.textContent = options[i];
+    const meaningSpan = btn.querySelector(".option-meaning");
+    const detailSpan = btn.querySelector(".option-detail");
+    meaningSpan.textContent = optionsData[i].meaning;
+    detailSpan.classList.add("hidden");
+    detailSpan.innerHTML = "";
     btn.className = "quiz-option";
     btn.disabled = false;
-    btn.dataset.correct = options[i] === correctMeaning ? "true" : "false";
+    btn.dataset.index = i;
+  });
+}
+
+function renderChoiceSaved(saved) {
+  const { selectedIndex, isCorrect, optionsData, currentWord: savedWord } = saved;
+  currentWord = savedWord;
+
+  choiceWord.textContent = currentWord.word;
+  choicePos.textContent = currentWord.pos;
+  showPhonetic(choicePhonetic, currentWord);
+  choiceProgress.textContent = `${queueIndex + 1} / ${queue.length}`;
+  choiceSentence.textContent = `📖 ${currentWord.sentence}`;
+  isTransitioning = true;
+  document.getElementById("choicePrev").classList.remove("hidden");
+
+  if (isCorrect) {
+    choiceResult.textContent = "✅ 回答正确！";
+    choiceResult.className = "quiz-result correct";
+    choiceNext.classList.add("hidden");
+  } else {
+    choiceResult.textContent = `❌ 正确答案：${currentWord.meaning}`;
+    choiceResult.className = "quiz-result wrong";
+    choiceNext.classList.remove("hidden");
+  }
+
+  const btns = choiceOptions.querySelectorAll(".quiz-option");
+  btns.forEach((btn, i) => {
+    const data = optionsData[i];
+    const meaningSpan = btn.querySelector(".option-meaning");
+    const detailSpan = btn.querySelector(".option-detail");
+
+    meaningSpan.textContent = data.meaning;
+    btn.disabled = true;
+
+    // 显示英文+音标
+    detailSpan.classList.remove("hidden");
+    const phoneticText = data.phonetic ? ` ${data.phonetic}` : "";
+    detailSpan.innerHTML = `
+      <span class="opt-word">${data.word}</span>
+      <span class="opt-phonetic clickable-phonetic" data-word="${data.word}">🔊${phoneticText}</span>
+    `;
+
+    btn.className = "quiz-option";
+    if (data.isCorrect) btn.classList.add("correct");
+    if (i === selectedIndex && !isCorrect) btn.classList.add("wrong");
+  });
+
+  // 给音标绑定点击事件
+  document.querySelectorAll("#choiceOptions .clickable-phonetic").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const word = el.dataset.word;
+      if (word) speakWord(word);
+    });
   });
 }
 
 choiceOptions.addEventListener("click", (e) => {
   const btn = e.target.closest(".quiz-option");
   if (!btn || btn.disabled || isTransitioning) return;
+  // 如果点击的是音标或其他内部元素，不处理
+  if (e.target.closest(".clickable-phonetic") || e.target.closest(".opt-word") || e.target.closest(".opt-phonetic")) return;
 
-  const isCorrect = btn.dataset.correct === "true";
+  const index = parseInt(btn.dataset.index);
+  const optionsData = currentOptionsData;
+  const isCorrect = optionsData[index].isCorrect;
+
+  // 记录答案
+  choiceAnswers[queueIndex] = {
+    answered: true,
+    selectedIndex: index,
+    isCorrect,
+    optionsData,
+    currentWord,
+  };
+
   const btns = choiceOptions.querySelectorAll(".quiz-option");
   btns.forEach((b) => (b.disabled = true));
   isTransitioning = true;
 
-  btns.forEach((b) => {
-    if (b.dataset.correct === "true") b.classList.add("correct");
+  // 显示所有选项的英文+音标
+  btns.forEach((b, i) => {
+    const data = optionsData[i];
+    const detailSpan = b.querySelector(".option-detail");
+    detailSpan.classList.remove("hidden");
+    const phoneticText = data.phonetic ? ` ${data.phonetic}` : "";
+    detailSpan.innerHTML = `
+      <span class="opt-word">${data.word}</span>
+      <span class="opt-phonetic clickable-phonetic" data-word="${data.word}">🔊${phoneticText}</span>
+    `;
+
+    b.className = "quiz-option";
+    if (data.isCorrect) b.classList.add("correct");
+    if (i === index && !isCorrect) b.classList.add("wrong");
   });
-  btn.classList.add(isCorrect ? "correct" : "wrong");
+
+  // 音标点击发音
+  document.querySelectorAll("#choiceOptions .clickable-phonetic").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const word = el.dataset.word;
+      if (word) speakWord(word);
+    });
+  });
 
   choiceResult.textContent = isCorrect ? "✅ 回答正确！" : `❌ 正确答案：${currentWord.meaning}`;
   choiceResult.className = `quiz-result ${isCorrect ? "correct" : "wrong"}`;
@@ -433,8 +556,21 @@ choiceOptions.addEventListener("click", (e) => {
 });
 
 choiceNext.addEventListener("click", () => {
-  queueIndex++;
-  renderChoice();
+  if (queueIndex < queue.length - 1) {
+    queueIndex++;
+    renderChoice();
+  } else {
+    // 已经是最后一题，刷新队列
+    refreshQueue();
+    showMode("choice");
+  }
+});
+
+document.getElementById("choicePrev").addEventListener("click", () => {
+  if (queueIndex > 0) {
+    queueIndex--;
+    renderChoice();
+  }
 });
 
 // ===================================================================
