@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="单词大师">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#667eea">
+  <title>考研单词大师</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶栏 -->
+    <header class="header">
+      <div class="header-inner">
+        <h1 class="logo">📚 考研单词大师</h1>
+        <div class="header-right">
+          <span class="progress-badge" id="progressBadge">0/0</span>
+          <button class="btn-icon" id="statsBtn" title="学习统计">📊</button>
+          <button class="btn-icon" id="resetBtn" title="重置进度">🔄</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 模式选择标签页 -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-mode="flashcard">📖 记忆卡</button>
+      <button class="tab" data-mode="choice">🎯 选择题</button>
+      <button class="tab" data-mode="spelling">✍️ 拼写</button>
+      <button class="tab" data-mode="sentence">📝 例句填空</button>
+      <button class="tab" data-mode="browse">📋 词表浏览</button>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main" id="mainContent">
+
+      <!-- ===== 记忆卡模式 ===== -->
+      <section class="mode active" id="mode-flashcard">
+        <div class="card-container">
+          <div class="card" id="flashcard">
+            <div class="card-front">
+              <div class="card-pos" id="fcPos"></div>
+              <div class="card-word" id="fcWord">加载中...</div>
+              <div class="card-phonetic" id="fcPhonetic"></div>
+              <div class="card-hint">点击卡片或按空格键查看释义</div>
+            </div>
+            <div class="card-back hidden">
+              <div class="card-meaning" id="fcMeaning"></div>
+              <div class="card-sentence" id="fcSentence"></div>
+              <div class="card-mnemonic" id="fcMnemonic"></div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-secondary" id="fcAgain">😣 不认识</button>
+            <button class="btn btn-secondary" id="fcHard">🤔 模糊</button>
+            <button class="btn btn-primary" id="fcGood">✅ 认识</button>
+            <button class="btn btn-primary" id="fcEasy">🚀 很简单</button>
+          </div>
+          <div class="card-counter" id="fcCounter">1 / 20</div>
+        </div>
+      </section>
+
+      <!-- ===== 选择题模式 ===== -->
+      <section class="mode" id="mode-choice">
+        <div class="quiz-container">
+          <div class="quiz-header">
+            <span class="quiz-progress" id="choiceProgress">1 / 20</span>
+            <div class="quiz-word" id="choiceWord">loading...</div>
+            <div class="card-phonetic" id="choicePhonetic"></div>
+            <span class="quiz-pos" id="choicePos"></span>
+          </div>
+          <div class="quiz-options" id="choiceOptions">
+            <button class="quiz-option" data-index="0"></button>
+            <button class="quiz-option" data-index="1"></button>
+            <button class="quiz-option" data-index="2"></button>
+            <button class="quiz-option" data-index="3"></button>
+          </div>
+          <div class="quiz-result" id="choiceResult"></div>
+          <div class="quiz-sentence" id="choiceSentence"></div>
+          <button class="btn btn-primary hidden" id="choiceNext">下一题 →</button>
+        </div>
+      </section>
+
+      <!-- ===== 拼写模式 ===== -->
+      <section class="mode" id="mode-spelling">
+        <div class="quiz-container">
+          <div class="quiz-header">
+            <span class="quiz-progress" id="spellProgress">1 / 20</span>
+            <span class="quiz-word" id="spellMeaning">加载中...</span>
+          </div>
+          <div class="spell-pos" id="spellPos"></div>
+          <div class="card-phonetic" id="spellPhonetic"></div>
+          <div class="spell-hint" id="spellHint">点击下方按钮查看提示</div>
+          <div class="spell-input-area">
+            <input type="text" class="spell-input" id="spellInput" placeholder="输入英文单词..." autocomplete="off" autocapitalize="off">
+            <button class="btn btn-primary" id="spellSubmit">确认</button>
+          </div>
+          <div class="quiz-result" id="spellResult"></div>
+          <div class="spell-reveal hidden" id="spellReveal">
+            <div class="spell-correct-word" id="spellCorrectWord"></div>
+            <div class="card-sentence" id="spellSentence"></div>
+          </div>
+          <button class="btn btn-primary hidden" id="spellNext">下一题 →</button>
+          <button class="btn btn-secondary" id="spellShowTip">💡 提示</button>
+        </div>
+      </section>
+
+      <!-- ===== 例句填空模式 ===== -->
+      <section class="mode" id="mode-sentence">
+        <div class="quiz-container">
+          <div class="quiz-header">
+            <span class="quiz-progress" id="sentProgress">1 / 20</span>
+          </div>
+          <div class="sent-meaning" id="sentMeaning"></div>
+          <div class="sent-pos" id="sentPos"></div>
+          <div class="card-phonetic" id="sentPhonetic"></div>
+          <div class="sent-sentence" id="sentSentence"></div>
+          <div class="spell-input-area">
+            <input type="text" class="spell-input" id="sentInput" placeholder="填入缺失的单词..." autocomplete="off" autocapitalize="off">
+            <button class="btn btn-primary" id="sentSubmit">确认</button>
+          </div>
+          <div class="quiz-result" id="sentResult"></div>
+          <div class="spell-reveal hidden" id="sentReveal">
+            <div class="spell-correct-word" id="sentCorrectWord"></div>
+            <div class="card-sentence" id="sentFullSentence"></div>
+          </div>
+          <button class="btn btn-secondary" id="sentShowTip">💡 看中文提示</button>
+          <button class="btn btn-primary hidden" id="sentNext">下一题 →</button>
+        </div>
+      </section>
+
+      <!-- ===== 词表浏览模式 ===== -->
+      <section class="mode" id="mode-browse">
+        <div class="browse-toolbar">
+          <input type="text" class="browse-search" id="browseSearch" placeholder="🔍 搜索单词或中文..." autocomplete="off">
+          <select class="browse-filter" id="browseFilter">
+            <option value="all">全部单词</option>
+            <option value="mastered">已掌握 (Level ≥ 3)</option>
+            <option value="learning">学习中</option>
+            <option value="new">未学习</option>
+            <option value="hard">高频错误</option>
+          </select>
+        </div>
+        <div class="browse-list" id="browseList"></div>
+      </section>
+    </main>
+
+    <!-- 统计面板 (浮层) -->
+    <div class="modal-overlay hidden" id="statsModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>📊 学习统计</h2>
+          <button class="btn-icon" id="statsClose">✕</button>
+        </div>
+        <div class="modal-body" id="statsBody">
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">总词数</div></div>
+            <div class="stat-card"><div class="stat-num" id="statSeen">0</div><div class="stat-label">已学</div></div>
+            <div class="stat-card"><div class="stat-num" id="statMastered">0</div><div class="stat-label">已掌握</div></div>
+            <div class="stat-card"><div class="stat-num" id="statAccuracy">0%</div><div class="stat-label">正确率</div></div>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-label">学习进度</div>
+            <div class="progress-bar"><div class="progress-fill" id="statProgressFill" style="width:0%"></div></div>
+            <div class="progress-bar-label" id="statProgressText">0%</div>
+          </div>
+          <h3>📖 最近学习</h3>
+          <div class="stats-word-list" id="statRecent"></div>
+          <h3>😰 困难词</h3>
+          <div class="stats-word-list" id="statHard"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 重置确认浮层 -->
+    <div class="modal-overlay hidden" id="resetModal">
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <h2>⚠️ 确认重置</h2>
+          <button class="btn-icon" id="resetClose">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>确定要重置所有学习进度吗？此操作不可撤销！</p>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" id="resetCancel">取消</button>
+            <button class="btn btn-primary" id="resetConfirm" style="background:#e74c3c">确认重置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="words-data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // 注册 Service Worker（PWA 离线支持）
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        console.log('SW registered:', reg.scope);
+      }).catch((err) => {
+        console.log('SW registration failed:', err);
+      });
+    }
+  </script>
+</body>
+</html>

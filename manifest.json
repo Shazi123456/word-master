@@ -1,0 +1,25 @@
+{
+  "name": "考研单词大师",
+  "short_name": "单词大师",
+  "description": "考研英语单词学习工具 - 记忆卡、选择题、拼写、例句填空",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "categories": ["education", "reference"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
