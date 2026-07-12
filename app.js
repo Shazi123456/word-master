@@ -220,10 +220,52 @@ function updateProgressBadge() {
 }
 
 // ===================================================================
-//  音标辅助
+//  发音功能 - 点击音标朗读单词
 // ===================================================================
+let speechVoicesLoaded = false;
+if (window.speechSynthesis) {
+  // 某些浏览器（Chrome）需要异步加载语音列表
+  window.speechSynthesis.onvoiceschanged = () => { speechVoicesLoaded = true; };
+  // 立即尝试一次
+  if (window.speechSynthesis.getVoices().length > 0) speechVoicesLoaded = true;
+}
+
+function speakWord(text) {
+  if (!window.speechSynthesis) {
+    console.log("当前浏览器不支持语音合成");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.85;
+  utterance.pitch = 1.0;
+
+  // 选择英式发音优先
+  const voices = window.speechSynthesis.getVoices();
+  const enVoice = voices.find((v) => v.lang.startsWith("en-GB"))
+    || voices.find((v) => v.lang.startsWith("en-US"));
+  if (enVoice) utterance.voice = enVoice;
+
+  window.speechSynthesis.speak(utterance);
+}
+
 function showPhonetic(el, word) {
-  if (el) el.textContent = word.phonetic || "";
+  if (!el) return;
+  if (word.phonetic) {
+    el.textContent = `🔊 ${word.phonetic}`;
+    el.style.cursor = "pointer";
+    el.title = "点击朗读";
+    el.onclick = (e) => {
+      e.stopPropagation();
+      speakWord(word.word);
+    };
+  } else {
+    el.textContent = "";
+    el.style.cursor = "";
+    el.title = "";
+    el.onclick = null;
+  }
 }
 
 // ===================================================================
@@ -601,7 +643,7 @@ function renderBrowse() {
         <div>
           <span class="bw-word">${w.word}</span>
           <span class="bw-pos">${w.pos}</span>
-          <span class="card-phonetic" style="display:inline;font-size:13px;margin-left:8px">${w.phonetic || ""}</span>
+          <span class="card-phonetic clickable-phonetic" style="display:inline;font-size:13px;margin-left:8px" data-word="${w.word}">${w.phonetic ? "🔊 " + w.phonetic : ""}</span>
         </div>
         <span class="bw-meaning">${w.meaning}</span>
         <span class="bw-level ${levelClass}">${levelText}</span>
@@ -610,13 +652,23 @@ function renderBrowse() {
   }).join("");
 
   browseList.querySelectorAll(".browse-item").forEach((el) => {
-    el.addEventListener("click", () => {
+    el.addEventListener("click", (e) => {
+      // 如果点击的是音标，交给音标的点击事件处理
+      if (e.target.closest(".clickable-phonetic")) return;
       const id = parseInt(el.dataset.id);
       const w = words.find((ww) => ww.id === id);
       if (!w) return;
       alert(
         `${w.word} ${w.phonetic || ""} (${w.pos})\n${w.meaning}\n\n📖 ${w.sentence}\n${w.sentence_cn}\n\n💡 ${w.mnemonic}`
       );
+    });
+  });
+  // 音标点击发音
+  browseList.querySelectorAll(".clickable-phonetic").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const word = el.dataset.word;
+      if (word) speakWord(word);
     });
   });
 }

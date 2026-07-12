@@ -232,6 +232,21 @@ body {
   letter-spacing: 0.5px;
 }
 
+.clickable-phonetic {
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+  display: inline-block;
+}
+
+.clickable-phonetic:hover {
+  color: var(--primary);
+  transform: scale(1.05);
+}
+
+.clickable-phonetic:active {
+  transform: scale(0.95);
+}
+
 .card-pos {
   font-size: 14px;
   color: var(--text-secondary);
